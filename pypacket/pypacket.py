@@ -7,14 +7,13 @@ from platform import python_version_tuple
 from typing import TypeVar, Callable, Iterable, Any
 from struct import pack_into, unpack_from, calcsize as calcsize_fmt
 
-_T = TypeVar("_T")
-
 # TODO: add stop option to Child?
 # TODO: remove python3.7 requirement (implementation without ordered dictionaries)
 
 # python >= 3.7 needed for ordered dictionaries
 assert tuple(map(int, python_version_tuple()))[0:2] >= (3, 7), "unsupported python version (>=3.7)"
 
+_T = TypeVar("_T")
 _STOP = "stop"
 _PATTRS = "_pattrs"
 
