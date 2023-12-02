@@ -9,7 +9,7 @@ from pypacket import (
   Const,
   Field,
   Child,
-  frame,
+  packet,
   calcsize,
   utf8size,
   utf8tobytes,
@@ -18,25 +18,24 @@ from pypacket import (
   decode
 )
 
-# the frame decorator is used to specify the structure of the packet, indicating how each field must be serialized
-@frame(
+# the packet decorator is used to specify the structure of the packet, indicating how each field must be serialized
+@packet(
   # each object attribute to include in the serialization is specified with its name as the parameter name and a Field object as its value
   # the first argument to Field is the format string (from python's struct module) to be used to encode/decode the attribute
-  # the order argument allows to specify the byte order of the field (from python's struct module; default=">" [big-endian])
   # the enc and dec arguments allow to specify a function which will be called before/after the attribute is encoded/decoded
   #   NOTE:
   #     the order of the parameters will determine the order they are serialized
   #     the return type of the enc function must match the type specified in the format string
   #     the return type of the dec function must match the class' attribute type
-  x=Field("H", order="<", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short little-endian
-  y=Field("H", order="@", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short with native order
+  x=Field("<H", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short little-endian
+  y=Field("@H", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short with native order
 )
-# a class is defined with the same parameters passed to the frame decorator as class attributes
+# a class is defined with the same parameters passed to the packet decorator as class attributes
 class Point:
   x: float
   y: float
 
-# the frame decorator will return the processed class as a dataclass, therefore, an object can be created as follows
+# the packet decorator will return the processed class as a dataclass, therefore, an object can be created as follows
 p = Point(420.69, 13.37)
 print(p) # Point(x=420.69, y=13.37)
 # to encode the object the encode() function is used
@@ -48,7 +47,7 @@ print(*decode(Point, buff), end="\n\n") # Point(x=420.69, y=13.37) 4
 
 # packets can also have variable-sized fields (e.g. strings)
 # two different fields are used to specify a variable-sized field, the first indicating the second's size
-@frame(
+@packet(
   age=Field("B"),
   height=Field("f"),
   weight=Field("f"),
@@ -75,7 +74,7 @@ print(*decode(Person, buff), end="\n\n") # Person(age=22, height=180.0, weight=6
 # it is very common to have some packet fields as control fields (e.g. packet header to identify the packet type and/or packet version), this can be done with the Const class
 # a Const has the same parameters as Field except for the first one, which indicates its value
 # when decoding a Const, if the decoded value does not match the expected value an error will be raised
-@frame(
+@packet(
   _id=Const(0x45, "B"), # packet id (identifies the packet type with a unique value)
   _version=Const(0x01, "B"), # packet version (indicates the packet type version)
   unixtime=Field("L")
@@ -93,8 +92,8 @@ print(*decode(Time, buff), end="\n\n") # Time(unixtime=1697915180) 6
 print(p, calcsize(p)) # Person(age=22, height=180.0, weight=66.75, name='Fogell McLovin') 24
 print(t, calcsize(t), end="\n\n") # Time(unixtime=1697964674) 6
 
-# a frame can also have other packet objects as childs, this can be done with the Child class
-@frame(
+# a packet can also have other packet objects as childs, this can be done with the Child class
+@packet(
   _id=Const(0xff, "B"),
   # specify the expected object types as positional arguments to Child
   # the count parameter specifies the amount of packet child objects
@@ -143,7 +142,7 @@ print(*decode(Player, buff), end="\n\n")
 #   enemies=[Person(age=20, height=200.0, weight=88.0, name='Dwight'), Person(age=19, height=188.0, weight=78.0, name='Mose')]) 100
 
 # if a Child does not have a size or count it will be encoded/decoded until the end of the object list/byte stream
-@frame(points=Child(Point))
+@packet(points=Child(Point))
 class PointList:
   points: list[Point]
 
@@ -154,7 +153,7 @@ print(binascii.hexlify(buff).decode("utf-8"), size) # 0104d4300104d4300104d43001
 print(*decode(PointList, buff), end="\n\n") # PointList(points=[Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0)]) 20
 
 # a Child can also have arbitrarily many packet subtypes with any order (only if each packet subtype has some Const identifying it)
-@frame(objects=Child(Time, Player))
+@packet(objects=Child(Time, Player))
 class Dummy:
   objects: list[Time | Player]
 
@@ -187,7 +186,7 @@ print(*decode(Dummy, buff), end="\n\n")
 # for example, let's define an object with a Field which stores an array of 8 bit integers using the value 255 (0xff) as the delimiter
 # so, when the Field is encoded, the stop value will be appended to the end of the Field's buffer
 # likewise, when the Field is decoded, all values in the data buffer will be decoded until the stop value is found
-@frame(
+@packet(
   value=Field(
     "B", # encode each element of the value list as byte
     stop=0xff # use 255 as the stop value
@@ -212,7 +211,7 @@ print(*decode(Int8Array, buff), end="\n\n")
 def bytestoint8(val: bytes) -> list[int]: return [x if isinstance(x, int) else int.from_bytes(x) for x in val]
 def int8tobytes(val: int) -> bytes: return val.to_bytes(1)
 
-@frame(
+@packet(
   value=Field(
     "B", # encode each string character as a byte
     stop="\x00", # use a null byte as the stop value (must be a string as it will be processed by the encode/decode functions)

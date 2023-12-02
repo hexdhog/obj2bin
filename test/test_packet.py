@@ -4,37 +4,37 @@ from __future__ import annotations
 
 import unittest
 
-from pypacket import Const, Field, Child, frame, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
+from pypacket import Const, Field, Child, packet, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
 
-@frame(_id=Const(0, "B"), value=Field("i"))
+@packet(_id=Const(0, "B"), value=Field("i"))
 class DummyInt:
   value: int
 
-@frame(_id=Const(1, "B"), value=Field("f"))
+@packet(_id=Const(1, "B"), value=Field("f"))
 class DummyFloat:
   value: int
 
-@frame(_id=Const(2, "B"), size=Field("H", meta=True), value=Field("{size}s"))
+@packet(_id=Const(2, "B"), size=Field("H", meta=True), value=Field("{size}s"))
 class DummyString:
   value: str
   @property
   def size(self) -> int: return utf8size(self.value)
 
-@frame(
-  const_be=Const(0x1337, "H", order=">"),
-  const_le=Const(0x1337, "H", order="<"),
-  field_be=Field("H", order=">"),
-  field_le=Field("H", order="<")
+@packet(
+  const_be=Const(0x1337, ">H"),
+  const_le=Const(0x1337, "<H"),
+  field_be=Field(">H"),
+  field_le=Field("<H")
 )
 class DummyByteOrder:
   field_be: int
   field_le: int
 
-@frame(childs=Child(DummyInt, DummyFloat, DummyByteOrder))
+@packet(childs=Child(DummyInt, DummyFloat, DummyByteOrder))
 class DummyChild:
   childs: list
 
-@frame(
+@packet(
   childs_int=Child(DummyInt, DummyFloat, DummyByteOrder, count=3),
   size_str=Field("B", meta=True),
   childs_str=Child(DummyInt, DummyFloat, DummyByteOrder, count="size_str")
@@ -45,7 +45,7 @@ class DummyChildCount:
   @property
   def size_str(self) -> int: return len(self.childs_str)
 
-@frame(
+@packet(
   childs_int=Child(DummyInt, size=calcsize(DummyInt(0)) * 2, count=2),
   size_str=Field("B", meta=True),
   childs_str=Child(DummyInt, DummyFloat, DummyByteOrder, size="size_str")
@@ -59,7 +59,7 @@ class DummyChildSize:
 def _strtotuple(x: str) -> tuple[int, ...]: return tuple(int(x[i:i+2]) for i in range(0, len(x), 2))
 def _tupletostr(x: tuple) -> str: return "".join(f"{n:02d}" for n in x)
 
-@frame(
+@packet(
   const=Const(
     "0102030405060708",
     "8B",
@@ -75,7 +75,7 @@ def _tupletostr(x: tuple) -> str: return "".join(f"{n:02d}" for n in x)
 class DummyEncDec:
   field: tuple[int, ...]
 
-@frame(value=Field("B", meta=True))
+@packet(value=Field("B", meta=True))
 class DummyFieldMeta:
   value: int = 0
 
