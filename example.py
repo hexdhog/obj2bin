@@ -143,9 +143,7 @@ print(*decode(Player, buff), end="\n\n")
 #   enemies=[Person(age=20, height=200.0, weight=88.0, name='Dwight'), Person(age=19, height=188.0, weight=78.0, name='Mose')]) 100
 
 # if a Child does not have a size or count it will be encoded/decoded until the end of the object list/byte stream
-@frame(
-  points=Child(Point)
-)
+@frame(points=Child(Point))
 class PointList:
   points: list[Point]
 
@@ -156,9 +154,7 @@ print(binascii.hexlify(buff).decode("utf-8"), size) # 0104d4300104d4300104d43001
 print(*decode(PointList, buff), end="\n\n") # PointList(points=[Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0)]) 20
 
 # a Child can also have arbitrarily many packet subtypes with any order (only if each packet subtype has some Const identifying it)
-@frame(
-  objects=Child(Time, Player)
-)
+@frame(objects=Child(Time, Player))
 class Dummy:
   objects: list[Time | Player]
 
@@ -187,19 +183,57 @@ print(*decode(Dummy, buff), end="\n\n")
 #   Player(person=Person(age=21, height=173.0, weight=59.75, name='Jim'), register_timestamp=Time(unixtime=1697966449), friends=[Person(age=20, height=180.0, weight=65.25, name='Michael'), Person(age=25, height=190.75, weight=80.0, name='Pam'), Person(age=26, height=187.0, weight=89.0, name='Darryl')], enemies=[Person(age=20, height=200.0, weight=88.0, name='Dwight'), Person(age=19, height=188.0, weight=78.0, name='Mose')]),
 #   Time(unixtime=1697966449)]) 112
 
-def bytestoint8(val: bytes) -> list[int]: return [x if isinstance(x, int) else int.from_bytes(x) for x in val]
-def int8tobytes(val: list[int]) -> bytes: return val.to_bytes(1)
+# a Field can also encode/decode an arbitrary amount of values delimited by a stop value
+# for example, let's define an object with a Field which stores an array of 8 bit integers using the value 255 (0xff) as the delimiter
+# so, when the Field is encoded, the stop value will be appended to the end of the Field's buffer
+# likewise, when the Field is decoded, all values in the data buffer will be decoded until the stop value is found
+@frame(
+  value=Field(
+    "B", # encode each element of the value list as byte
+    stop=0xff # use 255 as the stop value
+  )
+)
+class Int8Array:
+  value: list[int]
 
-@frame(value=Field("B", stop="\x00", enc=(utf8tobytes, bytestoint8), dec=(int8tobytes, utf8frombytes)))
+d = Int8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+print(d)
+# Int8Array(value=[1, 2, 3, 4, 5, 6, 7, 8, 9])
+buff, size = encode(d)
+print(binascii.hexlify(buff).decode("utf-8"), size)
+# 010203040506070809ff 10
+print(*decode(Int8Array, buff), end="\n\n")
+# Int8Array(value=[1, 2, 3, 4, 5, 6, 7, 8, 9]) 10
+
+# the following example implements a null terminated string object
+# the functions below are used, alongside utf8tobytes and utf8frombytes, to encode and decode the null terminated string
+# it is important to note that the encode function/s will be called twice, once with the Field's attribute's value as argument and an other time with the stop value as argument
+# whereas the decode function/s will be called for each element in the Field's buffer until the stop value is found
+def bytestoint8(val: bytes) -> list[int]: return [x if isinstance(x, int) else int.from_bytes(x) for x in val]
+def int8tobytes(val: int) -> bytes: return val.to_bytes(1)
+
+@frame(
+  value=Field(
+    "B", # encode each string character as a byte
+    stop="\x00", # use a null byte as the stop value (must be a string as it will be processed by the encode/decode functions)
+    enc=(utf8tobytes, bytestoint8), # first convert the utf-8 string to bytes, then convert each byte to an int8
+    dec=(int8tobytes, utf8frombytes) # first convert the int8 to bytes, then convert the byte to a utf-8 string
+  )
+)
 class String:
   value: str
 
+  # the constructor allows the string value to be passed as a string or as a list of characters
+  # because when the object is decoded the string will be split into an array of characters
   def __init__(self, value: str | list[str]):
     if isinstance(value, list): value = "".join(value)
     self.value = value
 
-s = String("this is a stop test, is it working?")
+s = String("this is a null terminated string object")
 print(s)
+# String(value='this is a null terminated string object')
 buff, size = encode(s)
 print(binascii.hexlify(buff).decode("utf-8"), size)
+# 746869732069732061206e756c6c207465726d696e6174656420737472696e67206f626a65637400 40
 print(*decode(String, buff), end="\n\n")
+# String(value='this is a null terminated string object') 40
