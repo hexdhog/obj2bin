@@ -1,11 +1,11 @@
-# pypacket
+# obj2bin
 
-A simple packet serialization library. Define the packet structure and let pypacket deal with the serialization.
+A simple object serialization library. Define the packet structure and let obj2bin deal with the serialization.
 
 ```python
 import binascii
 
-from pypacket import Const, Field, packet, encode, decode, utf8tobytes, utf8frombytes, utf8size
+from obj2bin import Const, Field, packet, encode, decode, utf8tobytes, utf8frombytes, utf8size
 
 @packet(
   packet_id=Const(1, "B"),
@@ -35,7 +35,7 @@ print(*decode(User, buff))
 
 Python's [struct module](https://docs.python.org/3/library/struct.html) is used to serialize data to bytes. How each object attribute is serialized is determined by the `fmt` parameter which expects a [struct format string](https://docs.python.org/3/library/struct.html#struct-format-strings).
 
-The order the packet fields will be encoded is determined by the order of the keyword arguments passed to the `@packet()` decorator. Because of this, dictionary insertion order must be maintained and, therefore, **pypacket requires [Python >= 3.7](https://stackoverflow.com/questions/39980323/are-dictionaries-ordered-in-python-3-6#answer-39980744)**. This requirement is planned to be removed in the future.
+The order the packet fields will be encoded is determined by the order of the keyword arguments passed to the `@packet()` decorator. Because of this, dictionary insertion order must be maintained and, therefore, **obj2bin requires [Python >= 3.7](https://stackoverflow.com/questions/39980323/are-dictionaries-ordered-in-python-3-6#answer-39980744)**. This requirement is planned to be removed in the future.
 
 ## Packet field types
 

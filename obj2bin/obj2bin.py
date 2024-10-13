@@ -8,7 +8,6 @@ from typing import TypeVar, Callable, Iterable, Any
 from struct import pack_into, unpack_from, calcsize as calcsize_fmt
 
 # TODO: add stop option to Child?
-# TODO: remove python3.7 requirement (implementation without ordered dictionaries)
 
 # python >= 3.7 needed for ordered dictionaries
 assert tuple(map(int, python_version_tuple()))[0:2] >= (3, 7), "unsupported python version (>=3.7)"
@@ -26,7 +25,7 @@ def expifsingle(val: list | tuple | object) -> list | tuple | object: return val
 def fnwalk(fn: Callable[..., Any] | Iterable[Callable[..., Any]] | None, *args: tuple) -> object | None:
   return reduce(lambda v, f: f(expifsingle(v)) if callable(f) else v, [args, *fn] if isinstance(fn, (tuple, list)) else [args, fn])
 
-class PacketField:
+class Attribute:
   def __init__(self, enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None): self.enc, self.dec = enc, dec
   def process(self, fn: Callable[..., Any] | Iterable[Callable[..., Any]] | None, val: object) -> object:
     if not isinstance(val, (tuple, list)): val = [val]
@@ -34,12 +33,12 @@ class PacketField:
   def encode(self, val: object) -> object: return self.process(self.enc, val)
   def decode(self, val: object) -> object: return self.process(self.dec, val)
 
-class Field(PacketField):
+class Field(Attribute):
   def __init__(self, fmt: str, stop: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None,
                enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, meta: bool = False):
     self.fmt, self.stop, self.enc, self.dec, self.meta = fmt, stop, enc, dec, meta
 
-class Const(PacketField):
+class Const(Attribute):
   def __init__(self, value: object, fmt: str, enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None):
     self.value, self.fmt, self.enc, self.dec = value, fmt, enc, dec
 

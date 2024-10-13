@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import binascii
 
-from pypacket import (
+from obj2bin import (
   Const,
   Field,
   Child,

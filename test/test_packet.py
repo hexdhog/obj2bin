@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from pypacket import Const, Field, Child, packet, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
+from obj2bin import Const, Field, Child, packet, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
 
 @packet(_id=Const(0, "B"), value=Field("i"))
 class DummyInt:
