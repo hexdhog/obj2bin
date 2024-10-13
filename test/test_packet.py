@@ -4,23 +4,23 @@ from __future__ import annotations
 
 import unittest
 
-from obj2bin import Const, Field, Child, packet, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
+from obj2bin import Const, Field, Child, pack, calcsize, encode, decode, utf8size, utf8tobytes, utf8frombytes
 
-@packet(_id=Const(0, "B"), value=Field("i"))
+@pack(_id=Const(0, "B"), value=Field("i"))
 class DummyInt:
   value: int
 
-@packet(_id=Const(1, "B"), value=Field("f"))
+@pack(_id=Const(1, "B"), value=Field("f"))
 class DummyFloat:
   value: int
 
-@packet(_id=Const(2, "B"), size=Field("H", meta=True), value=Field("{size}s"))
+@pack(_id=Const(2, "B"), size=Field("H", meta=True), value=Field("{size}s"))
 class DummyString:
   value: str
   @property
   def size(self) -> int: return utf8size(self.value)
 
-@packet(
+@pack(
   const_be=Const(0x1337, ">H"),
   const_le=Const(0x1337, "<H"),
   field_be=Field(">H"),
@@ -30,11 +30,11 @@ class DummyByteOrder:
   field_be: int
   field_le: int
 
-@packet(childs=Child(DummyInt, DummyFloat, DummyByteOrder))
+@pack(childs=Child(DummyInt, DummyFloat, DummyByteOrder))
 class DummyChild:
   childs: list
 
-@packet(
+@pack(
   childs_int=Child(DummyInt, DummyFloat, DummyByteOrder, count=3),
   size_str=Field("B", meta=True),
   childs_str=Child(DummyInt, DummyFloat, DummyByteOrder, count="size_str")
@@ -45,7 +45,7 @@ class DummyChildCount:
   @property
   def size_str(self) -> int: return len(self.childs_str)
 
-@packet(
+@pack(
   childs_int=Child(DummyInt, size=calcsize(DummyInt(0)) * 2, count=2),
   size_str=Field("B", meta=True),
   childs_str=Child(DummyInt, DummyFloat, DummyByteOrder, size="size_str")
@@ -59,7 +59,7 @@ class DummyChildSize:
 def _strtotuple(x: str) -> tuple[int, ...]: return tuple(int(x[i:i+2]) for i in range(0, len(x), 2))
 def _tupletostr(x: tuple) -> str: return "".join(f"{n:02d}" for n in x)
 
-@packet(
+@pack(
   const=Const(
     "0102030405060708",
     "8B",
@@ -75,11 +75,11 @@ def _tupletostr(x: tuple) -> str: return "".join(f"{n:02d}" for n in x)
 class DummyEncDec:
   field: tuple[int, ...]
 
-@packet(value=Field("B", meta=True))
+@pack(value=Field("B", meta=True))
 class DummyFieldMeta:
   value: int = 0
 
-class TestPacket(unittest.TestCase):
+class TestPack(unittest.TestCase):
   # def test_dummy_count_size(self) -> None:
   #   # TODO: rethink test
   #   # child count

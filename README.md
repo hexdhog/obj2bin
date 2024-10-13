@@ -1,13 +1,13 @@
 # obj2bin
 
-A simple object serialization library. Define the packet structure and let obj2bin deal with the serialization.
+A simple object serialization library. Define the data structure with classes and let obj2bin deal with the serialization.
 
 ```python
 import binascii
 
-from obj2bin import Const, Field, packet, encode, decode, utf8tobytes, utf8frombytes, utf8size
+from obj2bin import Const, Field, pack, encode, decode, utf8tobytes, utf8frombytes, utf8size
 
-@packet(
+@pack(
   packet_id=Const(1, "B"),
   user_id=Field(">H"),
   name_size=Field("B", meta=True),
@@ -35,18 +35,18 @@ print(*decode(User, buff))
 
 Python's [struct module](https://docs.python.org/3/library/struct.html) is used to serialize data to bytes. How each object attribute is serialized is determined by the `fmt` parameter which expects a [struct format string](https://docs.python.org/3/library/struct.html#struct-format-strings).
 
-The order the packet fields will be encoded is determined by the order of the keyword arguments passed to the `@packet()` decorator. Because of this, dictionary insertion order must be maintained and, therefore, **obj2bin requires [Python >= 3.7](https://stackoverflow.com/questions/39980323/are-dictionaries-ordered-in-python-3-6#answer-39980744)**. This requirement is planned to be removed in the future.
+The order the fields will be encoded is determined by the order of the keyword arguments passed to the `@pack()` decorator. Because of this, dictionary insertion order must be maintained and, therefore, **obj2bin requires [Python >= 3.7](https://stackoverflow.com/questions/39980323/are-dictionaries-ordered-in-python-3-6#answer-39980744)**. This requirement is planned to be removed in the future.
 
-## Packet field types
+## Field types
 
 #### Field
 
-A packet field with a dynamic value. The value to be serialized is taken from the object's attribute whose name matches the keyword entry name.
+A field with a dynamic value. The value to be serialized is taken from the object's attribute whose name matches the keyword entry name.
 
 #### Const
 
-A packet field with a constant value. If, when being decoded, the value does not match the one specified in Const an exception will be raised. Useful for defining attributes which identify a packet (e.g. packet type identifier or version).
+A field with a constant value. If, when being decoded, the value does not match the one specified in Const an exception will be raised. Useful for defining attributes which identify a packet (e.g. packet type identifier or version).
 
 #### Child
 
-A packet field which serializes another packet object. Multiple packet object can be specified for the same field.
+A field which serializes another object. Multiple objects can be specified for the same field.

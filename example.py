@@ -9,7 +9,7 @@ from obj2bin import (
   Const,
   Field,
   Child,
-  packet,
+  pack,
   calcsize,
   utf8size,
   utf8tobytes,
@@ -18,8 +18,8 @@ from obj2bin import (
   decode
 )
 
-# the packet decorator is used to specify the structure of the packet, indicating how each field must be serialized
-@packet(
+# the pack decorator is used to specify the structure of the serialized data, indicating how each field must be serialized
+@pack(
   # each object attribute to include in the serialization is specified with its name as the parameter name and a Field object as its value
   # the first argument to Field is the format string (from python's struct module) to be used to encode/decode the attribute
   # the enc and dec arguments allow to specify a function which will be called before/after the attribute is encoded/decoded
@@ -30,12 +30,12 @@ from obj2bin import (
   x=Field("<H", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short little-endian
   y=Field("@H", enc=lambda x: int(x * 100), dec=lambda x: float(x / 100)), # unsigned short with native order
 )
-# a class is defined with the same parameters passed to the packet decorator as class attributes
+# a class is defined with the same parameters passed to the pack decorator as class attributes
 class Point:
   x: float
   y: float
 
-# the packet decorator will return the processed class as a dataclass, therefore, an object can be created as follows
+# the pack decorator will return the processed class as a dataclass, therefore, an object can be created as follows
 p = Point(420.69, 13.37)
 print(p) # Point(x=420.69, y=13.37)
 # to encode the object the encode() function is used
@@ -45,9 +45,9 @@ print(binascii.hexlify(buff).decode("utf-8"), size) # 55a43905 4
 # to decode the object the decode() function is used with the expected type to decode as the first parameter and the data buffer to decode from as the second
 print(*decode(Point, buff), end="\n\n") # Point(x=420.69, y=13.37) 4
 
-# packets can also have variable-sized fields (e.g. strings)
+# objects can also have variable-sized fields (e.g. strings)
 # two different fields are used to specify a variable-sized field, the first indicating the second's size
-@packet(
+@pack(
   age=Field("B"),
   height=Field("f"),
   weight=Field("f"),
@@ -71,10 +71,10 @@ buff, size = encode(p)
 print(binascii.hexlify(buff).decode("utf-8"), size) # 1600003443008085420e466f67656c6c204d634c6f76696e 24
 print(*decode(Person, buff), end="\n\n") # Person(age=22, height=180.0, weight=66.75, name='Fogell McLovin') 24
 
-# it is very common to have some packet fields as control fields (e.g. packet header to identify the packet type and/or packet version), this can be done with the Const class
+# it is very common to have some pack fields as control fields (e.g. a packet header to identify the type and/or version), this can be done with the Const class
 # a Const has the same parameters as Field except for the first one, which indicates its value
 # when decoding a Const, if the decoded value does not match the expected value an error will be raised
-@packet(
+@pack(
   _id=Const(0x45, "B"), # packet id (identifies the packet type with a unique value)
   _version=Const(0x01, "B"), # packet version (indicates the packet type version)
   unixtime=Field("L")
@@ -92,11 +92,11 @@ print(*decode(Time, buff), end="\n\n") # Time(unixtime=1697915180) 6
 print(p, calcsize(p)) # Person(age=22, height=180.0, weight=66.75, name='Fogell McLovin') 24
 print(t, calcsize(t), end="\n\n") # Time(unixtime=1697964674) 6
 
-# a packet can also have other packet objects as childs, this can be done with the Child class
-@packet(
+# a pack object can also have other pack objects as childs, this can be done with the Child class
+@pack(
   _id=Const(0xff, "B"),
   # specify the expected object types as positional arguments to Child
-  # the count parameter specifies the amount of packet child objects
+  # the count parameter specifies the amount of pack child objects
   # if count=1 then the attribute is treated like an object, instead of a list (note the type annotations on the class' attributes)
   person=Child(Person, count=1),
   register_timestamp=Child(Time, count=1),
@@ -142,7 +142,7 @@ print(*decode(Player, buff), end="\n\n")
 #   enemies=[Person(age=20, height=200.0, weight=88.0, name='Dwight'), Person(age=19, height=188.0, weight=78.0, name='Mose')]) 100
 
 # if a Child does not have a size or count it will be encoded/decoded until the end of the object list/byte stream
-@packet(points=Child(Point))
+@pack(points=Child(Point))
 class PointList:
   points: list[Point]
 
@@ -152,8 +152,8 @@ buff, size = encode(p)
 print(binascii.hexlify(buff).decode("utf-8"), size) # 0104d4300104d4300104d4300104d4300104d430 20
 print(*decode(PointList, buff), end="\n\n") # PointList(points=[Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0), Point(x=10.25, y=125.0)]) 20
 
-# a Child can also have arbitrarily many packet subtypes with any order (only if each packet subtype has some Const identifying it)
-@packet(objects=Child(Time, Player))
+# a Child can also have arbitrarily many pack subtypes with any order (only if each pack subtype has some Const identifying it)
+@pack(objects=Child(Time, Player))
 class Dummy:
   objects: list[Time | Player]
 
@@ -186,7 +186,7 @@ print(*decode(Dummy, buff), end="\n\n")
 # for example, let's define an object with a Field which stores an array of 8 bit integers using the value 255 (0xff) as the delimiter
 # so, when the Field is encoded, the stop value will be appended to the end of the Field's buffer
 # likewise, when the Field is decoded, all values in the data buffer will be decoded until the stop value is found
-@packet(
+@pack(
   value=Field(
     "B", # encode each element of the value list as byte
     stop=0xff # use 255 as the stop value
@@ -211,7 +211,7 @@ print(*decode(Int8Array, buff), end="\n\n")
 def bytestoint8(val: bytes) -> list[int]: return [x if isinstance(x, int) else int.from_bytes(x) for x in val]
 def int8tobytes(val: int) -> bytes: return val.to_bytes(1)
 
-@packet(
+@pack(
   value=Field(
     "B", # encode each string character as a byte
     stop="\x00", # use a null byte as the stop value (must be a string as it will be processed by the encode/decode functions)

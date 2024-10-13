@@ -11,7 +11,7 @@ with Path.open(directory / "README.md", encoding="utf-8") as f:
 setup(
   name="obj2bin",
   version=__version__,
-  description="A simple packet serialization library",
+  description="A simple object serialization library",
   author="hexdhog",
   license="MIT",
   long_description=long_description,

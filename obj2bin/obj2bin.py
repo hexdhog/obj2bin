@@ -25,7 +25,7 @@ def expifsingle(val: list | tuple | object) -> list | tuple | object: return val
 def fnwalk(fn: Callable[..., Any] | Iterable[Callable[..., Any]] | None, *args: tuple) -> object | None:
   return reduce(lambda v, f: f(expifsingle(v)) if callable(f) else v, [args, *fn] if isinstance(fn, (tuple, list)) else [args, fn])
 
-class Attribute:
+class PackAttribute:
   def __init__(self, enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None): self.enc, self.dec = enc, dec
   def process(self, fn: Callable[..., Any] | Iterable[Callable[..., Any]] | None, val: object) -> object:
     if not isinstance(val, (tuple, list)): val = [val]
@@ -33,12 +33,12 @@ class Attribute:
   def encode(self, val: object) -> object: return self.process(self.enc, val)
   def decode(self, val: object) -> object: return self.process(self.dec, val)
 
-class Field(Attribute):
+class Field(PackAttribute):
   def __init__(self, fmt: str, stop: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None,
                enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, meta: bool = False):
     self.fmt, self.stop, self.enc, self.dec, self.meta = fmt, stop, enc, dec, meta
 
-class Const(Attribute):
+class Const(PackAttribute):
   def __init__(self, value: object, fmt: str, enc: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None, dec: Callable[..., Any] | Iterable[Callable[..., Any]] | None = None):
     self.value, self.fmt, self.enc, self.dec = value, fmt, enc, dec
 
@@ -53,7 +53,7 @@ class Child:
     if not isinstance(childs, (tuple, list)): childs = [childs]
     return childs, size, count
 
-def packet(**attrs: Const | Field | Child) -> Callable[[type], type]: return lambda x: setattr(x, _PATTRS, attrs) or dataclass(x) # type: ignore[func-returns-value]
+def pack(**attrs: Const | Field | Child) -> Callable[[type], type]: return lambda x: setattr(x, _PATTRS, attrs) or dataclass(x) # type: ignore[func-returns-value]
 def calcsize(obj: object) -> int:
   # dictionary holding the processed values passed as a variadic argument to format Fields' format string (in case some Field uses another's value as format string)
   vals: dict[str, Any] = {}
